@@ -9,13 +9,14 @@ textarea{width:100%;box-sizing:border-box;height:120px;font:inherit}
 button{padding:8px 14px;margin:8px 0;font:inherit}
 li.bad{color:#a00}
 details pre{white-space:pre-wrap;font-size:12px}
-#feb,#leap{padding:8px;border:1px solid #888;border-radius:6px;margin:8px 0}
+#feb,#leap,#mon{padding:8px;border:1px solid #888;border-radius:6px;margin:8px 0}
 </style></head><body>
 <script data-bean-store>(function(){if(typeof location!=='undefined'&&location&&location.protocol==='about:'&&typeof document!=='undefined'&&document.addEventListener){document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.target==='_blank')return;e.preventDefault();try{location.hash=a.getAttribute('href')}catch(x){}},true)}if(typeof window==='undefined')return;try{window.localStorage.getItem('x');return}catch(e){}var d=Object.assign({},window.__BEAN_SAVED||{});function post(){try{parent.postMessage({type:'bean-store',data:d},'*')}catch(e){}}var ls={getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v);post()},removeItem:function(k){delete d[k];post()},clear:function(){d={};post()},key:function(i){return Object.keys(d)[i]||null}};Object.defineProperty(ls,'length',{get:function(){return Object.keys(d).length}});try{Object.defineProperty(window,'localStorage',{value:ls,configurable:true})}catch(e){}})();</script>
 <h1>Date Sorter</h1>
 <div id="banner"></div>
 <div id="feb"></div>
 <div id="leap"></div>
+<div id="mon"></div>
 <p>One date per line, like 2024-3-9 or 2024-02-29. Impossible dates are rejected, not sorted.</p>
 <textarea id="in">2024-2-30
 2024-2-29
@@ -54,9 +55,12 @@ function isRealDateAlwaysLeap(s){
   if(!p||p.m<1||p.m>12||p.d<1)return false;
   return p.d<=daysInWith(function(){return true;},p.y,p.m);
 }
-// the leap test: takes any checker, true if it passes
 function leapTest(check){
   return check('2024-2-29')===true&&check('2023-2-29')===false;
+}
+// month-length test: bad dates rejected, nearest neighbours accepted
+function monthTest(check){
+  return check('2024-4-31')===false&&check('2024-2-30')===false&&check('2024-4-30')===true&&check('2024-2-29')===true;
 }
 function key(s){var p=parseDate(s);return p.y*10000+p.m*100+p.d;}
 function sortDates(lines,check){
@@ -91,15 +95,20 @@ function runTests(){
   if(!lp)allPass=false;n++;out.push((lp?'ok   ':'FAIL ')+'leap: 2024-2-29 accepted, 2023-2-29 rejected');
   var lb=leapTest(isRealDateAlwaysLeap)===false&&isRealDateAlwaysLeap('2023-2-29')===true;
   if(!lb)allPass=false;n++;out.push((lb?'ok   ':'FAIL ')+'always-leap copy fails the leap test (it accepts 2023-2-29)');
+  var mr=monthTest(isRealDate);
+  if(!mr)allPass=false;n++;out.push((mr?'ok   ':'FAIL ')+'months: 31 April and 30 Feb rejected, 30 April and 29 Feb 2024 accepted');
+  var mb=monthTest(isRealDateBroken)===false&&isRealDateBroken('2024-4-31')===true&&isRealDateBroken('2024-2-30')===true;
+  if(!mb)allPass=false;n++;out.push((mb?'ok   ':'FAIL ')+'broken twin fails the month test: wrongly accepts 31 April and 30 Feb');
   return {pass:allPass,log:out,n:n};
 }
 var t=runTests(),b=document.getElementById('banner');
 b.className=t.pass?'pass':'fail';
-b.textContent=t.pass?'Self-test: all '+t.n+' checks pass (Feb 30 rejected, leap years right, broken copies caught)':'Self-test FAILED';
+b.textContent=t.pass?'Self-test: all '+t.n+' checks pass (Feb 30 and 31 April rejected, leap years right, broken copies caught)':'Self-test FAILED';
 document.getElementById('log').textContent=t.log.join('\n');
 var f=document.getElementById('feb'),rej=!isRealDate('2024-2-30'),brk=isRealDateBroken('2024-2-30');
 f.textContent='2024-2-30: real sorter says '+(rej?'REJECTED (not a real date)':'accepted')+'. Broken copy says '+(brk?'accepted (wrong, as expected)':'rejected')+'.';
 document.getElementById('leap').textContent='Leap years: real sorter takes 2024-2-29 ('+isRealDate('2024-2-29')+') and rejects 2023-2-29 ('+!isRealDate('2023-2-29')+'). Always-leap copy takes 2023-2-29 ('+isRealDateAlwaysLeap('2023-2-29')+', wrong, caught).';
+document.getElementById('mon').textContent='31 April: real sorter rejects it ('+!isRealDate('2024-4-31')+'), broken twin accepts it ('+isRealDateBroken('2024-4-31')+', wrong, caught). 30 February: real rejects ('+!isRealDate('2024-2-30')+'), broken accepts ('+isRealDateBroken('2024-2-30')+', wrong, caught).';
 function render(){
   var r=sortDates(document.getElementById('in').value.split('\n'),isRealDate);
   document.getElementById('ok').innerHTML=r.ok.map(function(x){return '<li>'+x.replace(/</g,'&lt;')+'</li>';}).join('');
