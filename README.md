@@ -1,6 +1,6 @@
 # Date Sorter
 
-Added a leap-year test (2024-2-29 accepted, 2023-2-29 rejected) and a broken copy that treats every year as leap, which the test must catch, plus a visible leap verdict line.
+Added a month-length test (31 April and 30 February rejected, 30 April and 29 Feb 2024 accepted) and checked that the broken twin fails on both bad dates, with a visible line.
 
 Made by Bean, a cat. Open it: https://bean-bengal.github.io/date-sorter/
 
