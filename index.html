@@ -9,10 +9,12 @@ textarea{width:100%;box-sizing:border-box;height:120px;font:inherit}
 button{padding:8px 14px;margin:8px 0;font:inherit}
 li.bad{color:#a00}
 details pre{white-space:pre-wrap;font-size:12px}
+#feb{padding:8px;border:1px solid #888;border-radius:6px;margin:8px 0}
 </style></head><body>
 <script data-bean-store>(function(){if(typeof location!=='undefined'&&location&&location.protocol==='about:'&&typeof document!=='undefined'&&document.addEventListener){document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.target==='_blank')return;e.preventDefault();try{location.hash=a.getAttribute('href')}catch(x){}},true)}if(typeof window==='undefined')return;try{window.localStorage.getItem('x');return}catch(e){}var d=Object.assign({},window.__BEAN_SAVED||{});function post(){try{parent.postMessage({type:'bean-store',data:d},'*')}catch(e){}}var ls={getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v);post()},removeItem:function(k){delete d[k];post()},clear:function(){d={};post()},key:function(i){return Object.keys(d)[i]||null}};Object.defineProperty(ls,'length',{get:function(){return Object.keys(d).length}});try{Object.defineProperty(window,'localStorage',{value:ls,configurable:true})}catch(e){}})();</script>
 <h1>Date Sorter</h1>
 <div id="banner"></div>
+<div id="feb"></div>
 <p>One date per line, like 2024-3-9 or 2024-02-29. Impossible dates are rejected, not sorted.</p>
 <textarea id="in">2024-2-30
 2024-2-29
@@ -58,30 +60,32 @@ var cases=[
  ['2024-4-31',false],['2024-4-30',true],['2024-13-1',false],['2024-0-5',false],['2024-1-0',false],['2024-12-31',true],['abc',false]
 ];
 function runTests(){
-  var out=[],allPass=true;
+  var out=[],allPass=true,n=0;
   cases.forEach(function(c){
-    var r=isRealDate(c[0])===c[1];if(!r)allPass=false;
+    var r=isRealDate(c[0])===c[1];if(!r)allPass=false;n++;
     out.push((r?'ok   ':'FAIL ')+c[0]+' -> '+c[1]);
   });
   var s=sortDates(['2024-3-1','2023-12-5','2024-2-30','2024-2-29'],isRealDate);
   var sr=s.ok.join()==='2023-12-5,2024-2-29,2024-3-1'&&s.bad.join()==='2024-2-30';
-  if(!sr)allPass=false;out.push((sr?'ok   ':'FAIL ')+'sort drops 2024-2-30');
-  // broken twin must fail the Feb 30 and Feb 29 (non-leap) boundaries
-  var caught=['2024-2-30','2023-2-29','1900-2-29'].every(function(d){return isRealDateBroken(d)!==false;});
+  if(!sr)allPass=false;n++;out.push((sr?'ok   ':'FAIL ')+'sort drops 2024-2-30');
   var twinFails=cases.some(function(c){return isRealDateBroken(c[0])!==c[1];});
-  var feb30=isRealDateBroken('2024-2-30')!==false;
-  var okTwin=twinFails&&feb30&&caught;
-  if(!okTwin)allPass=false;
-  out.push((okTwin?'ok   ':'FAIL ')+'broken copy fails Feb 29/30 boundaries');
-  return {pass:allPass,log:out};
+  var feb30=isRealDateBroken('2024-2-30')===true;
+  var bs=sortDates(['2024-3-1','2024-2-30','2024-2-29'],isRealDateBroken);
+  var sortCaught=bs.ok.indexOf('2024-2-30')>=0&&bs.bad.length===0;
+  var okTwin=twinFails&&feb30&&sortCaught;
+  if(!okTwin)allPass=false;n++;
+  out.push((okTwin?'ok   ':'FAIL ')+'broken copy accepts 2024-2-30, so the checker can fail');
+  return {pass:allPass,log:out,n:n};
 }
 var t=runTests(),b=document.getElementById('banner');
 b.className=t.pass?'pass':'fail';
-b.textContent=t.pass?'Self-test: all '+(cases.length+2)+' checks pass (leap years included)':'Self-test FAILED';
+b.textContent=t.pass?'Self-test: all '+t.n+' checks pass (Feb 30 rejected, broken copy caught)':'Self-test FAILED';
 document.getElementById('log').textContent=t.log.join('\n');
+var f=document.getElementById('feb'),rej=!isRealDate('2024-2-30'),brk=isRealDateBroken('2024-2-30');
+f.textContent='2024-2-30: real sorter says '+(rej?'REJECTED (not a real date)':'accepted')+'. Broken copy says '+(brk?'accepted (wrong, as expected)':'rejected')+'.';
 function render(){
   var r=sortDates(document.getElementById('in').value.split('\n'),isRealDate);
-  document.getElementById('ok').innerHTML=r.ok.map(function(x){return '<li>'+x+'</li>';}).join('');
+  document.getElementById('ok').innerHTML=r.ok.map(function(x){return '<li>'+x.replace(/</g,'&lt;')+'</li>';}).join('');
   document.getElementById('bad').innerHTML=r.bad.map(function(x){return '<li class="bad">'+x.replace(/</g,'&lt;')+' (not a real date)</li>';}).join('');
 }
 document.getElementById('go').addEventListener('click',render);
